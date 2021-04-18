@@ -34,7 +34,7 @@ public class ExecutorTest {
         checkConfig = CheckConfig.builder()
                 .srcLoader(date -> CheckEntry.wrap(Arrays.asList(a1, a2, a3)))
                 .targetLoader(date -> CheckEntry.wrap(Arrays.asList(b1, b2, b3)))
-                .checkPre(date -> true)
+                .checkPre(context -> true)
                 .id("test")
                 //.checkSync(null)
                 .checkAfter(context -> System.out.println(context.getCheckResult().getDiffDetails()))

@@ -20,6 +20,11 @@ public abstract class AbstractCheckProcessor implements CheckProcessor {
     public void compareCheck(CheckContext context) {
         List<CheckEntry> source = context.getSource();
         List<CheckEntry> target = context.getTarget();
+        //都为空时,继续走
+        if (source.isEmpty() && target.isEmpty()){
+            return;
+        }
+        //单个为空时,认为数据没准备好
         if (source.isEmpty() || target.isEmpty()) {
             throw new CheckException("对账数据未准备好");
         }
@@ -51,6 +56,7 @@ public abstract class AbstractCheckProcessor implements CheckProcessor {
                         .key(k)
                         .state(CheckStateEnum.SOURCE_MORE)
                         .sync(CheckSyncEnum.NO_SYNC)
+                        .differentFields(createSingle(v.getCheckData(), true))
                         .build());
                 return;
             }
@@ -71,6 +77,7 @@ public abstract class AbstractCheckProcessor implements CheckProcessor {
                         .key(k)
                         .state(CheckStateEnum.TARGET_MORE)
                         .sync(CheckSyncEnum.NO_SYNC)
+                        .differentFields(createSingle(v.getCheckData(), false))
                         .build());
             }
 
@@ -95,6 +102,26 @@ public abstract class AbstractCheckProcessor implements CheckProcessor {
         });
         targetData.forEach((k, v) -> {
             if (sourceData.containsKey(k)) {
+                return;
+            }
+            differnt.put(k, FieldkUnit.builder().fieldName(k).target(v).build());
+        });
+        return differnt;
+    }
+
+    /**
+     * source_more 与 target_more 的情况下,将checkData映射为fieldkUnitMap 放入checkUnit
+     * 方便使用拿到原始值, 方判断是否需要处理
+     *
+     * @param checkData 原始值
+     * @param isSource  数据来源: true:源, false:目标
+     * @return
+     */
+    public Map<String, FieldkUnit> createSingle(Map<String, Object> checkData, boolean isSource) {
+        Map<String, FieldkUnit> differnt = new HashMap<>();
+        checkData.forEach((k, v) -> {
+            if (isSource) {
+                differnt.put(k, FieldkUnit.builder().fieldName(k).source(v).build());
                 return;
             }
             differnt.put(k, FieldkUnit.builder().fieldName(k).target(v).build());

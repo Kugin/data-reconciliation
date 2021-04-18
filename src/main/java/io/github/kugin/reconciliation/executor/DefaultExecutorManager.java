@@ -3,6 +3,8 @@ package io.github.kugin.reconciliation.executor;
 import cn.hutool.cache.impl.FIFOCache;
 import io.github.kugin.reconciliation.enums.ExecutorStatusEnum;
 
+import java.util.Objects;
+
 /**
  * @author Kugin
  */
@@ -26,13 +28,13 @@ public class DefaultExecutorManager extends AbstractExecutorManager {
             return false;
         }
         String status = getCurrentStatus();
-        return status.equals(ExecutorStatusEnum.END.toString());
+        return Objects.equals(status, ExecutorStatusEnum.END.toString());
     }
 
     @Override
     public void setStatus(ExecutorStatusEnum status) {
         if (status.equals(ExecutorStatusEnum.BEFORE)) {
-            cache.put(getProcessingKey(), true);
+            cache.put(getProcessingKey(), System.currentTimeMillis());
         }
         if (status.equals(ExecutorStatusEnum.END)) {
             cache.remove(getProcessingKey());

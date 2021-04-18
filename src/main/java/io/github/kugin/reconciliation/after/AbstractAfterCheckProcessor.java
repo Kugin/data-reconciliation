@@ -20,10 +20,12 @@ public abstract class AbstractAfterCheckProcessor implements AfterCheckProcessor
         executorManager.setStatus(ExecutorStatusEnum.AFTER);
         CheckResult checkResult = context.getCheckResult();
         autoSync(checkResult);
-        doAfter(context);
-        if (isComplete(checkResult)) {
+        if (isComplete(context)) {
             executorManager.setStatus(ExecutorStatusEnum.END);
+        } else {
+            executorManager.setStatus(ExecutorStatusEnum.ERROR);
         }
+        doAfter(context);
     }
 
     /**
@@ -35,15 +37,14 @@ public abstract class AbstractAfterCheckProcessor implements AfterCheckProcessor
         List<CheckUnit> diffDetails = checkResult.getDiffDetails();
         diffDetails.forEach(checkUnit -> {
             if (CheckStateEnum.DIFFERENT.equals(checkUnit.getState())) {
-                syncDifferent(checkUnit);
+                checkUnit.setSync(syncDifferent(checkUnit));
             }
             if (CheckStateEnum.SOURCE_MORE.equals(checkUnit.getState())) {
-                syncSourceMore(checkUnit);
+                checkUnit.setSync(syncSourceMore(checkUnit));
             }
             if (CheckStateEnum.TARGET_MORE.equals(checkUnit.getState())) {
-                syncTargetMore(checkUnit);
+                checkUnit.setSync(syncTargetMore(checkUnit));
             }
-            checkUnit.setSync(CheckSyncEnum.SYNC);
         });
     }
 }

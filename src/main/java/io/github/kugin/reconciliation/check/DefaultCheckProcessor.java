@@ -6,34 +6,29 @@ import io.github.kugin.reconciliation.domain.CheckResult;
 import io.github.kugin.reconciliation.domain.CheckUnit;
 import io.github.kugin.reconciliation.enums.CheckStateEnum;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Kugin
  */
-public class DefaultCheckProcessor extends AbstractCheckProcessor{
+public class DefaultCheckProcessor extends AbstractCheckProcessor {
 
     @Override
     public void doCompare(CheckContext context) {
         Map<String, CheckEntry> sourceMap = context.getSourceMap();
         Map<String, CheckEntry> targetMap = context.getTargetMap();
         List<CheckUnit> unitDetails = compareMap(sourceMap, targetMap);
-        Map<String, CheckEntry> sourceDiffMap = new HashMap<>();
-        Map<String, CheckEntry> targetDiffMap = new HashMap<>();
-        unitDetails.forEach(unit -> {
-            if (CheckStateEnum.SOURCE_MORE.equals(unit.getState())) {
-                sourceDiffMap.put(unit.getKey(), sourceMap.get(unit.getKey()));
-            }
-            if (CheckStateEnum.TARGET_MORE.equals(unit.getState())) {
-                targetDiffMap.put(unit.getKey(), targetMap.get(unit.getKey()));
-            }
-        });
+        Map<CheckStateEnum, List<CheckUnit>> unitdetailsMap = unitDetails.stream().collect(Collectors.groupingBy(CheckUnit::getState));
+        Map<String, CheckEntry> sourceDiffMap = Optional.ofNullable(unitdetailsMap.get(CheckStateEnum.SOURCE_MORE)).orElse(Collections.emptyList())
+                .stream().collect(Collectors.toMap(CheckUnit::getKey, unit -> sourceMap.get(unit.getKey())));
+        Map<String, CheckEntry> targetDiffMap = Optional.ofNullable(unitdetailsMap.get(CheckStateEnum.TARGET_MORE)).orElse(Collections.emptyList()).stream()
+                .collect(Collectors.toMap(CheckUnit::getKey, unit -> targetMap.get(unit.getKey())));
         CheckResult result = CheckResult.builder()
                 .sourceDiffMap(sourceDiffMap)
                 .targetDiffMap(targetDiffMap)
                 .diffDetails(unitDetails)
+                .diffDetailsMap(unitdetailsMap)
                 .build();
         context.setCheckResult(result);
     }

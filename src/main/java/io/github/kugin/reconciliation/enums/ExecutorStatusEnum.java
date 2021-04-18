@@ -7,5 +7,5 @@ package io.github.kugin.reconciliation.enums;
  * @author Kugin
  */
 public enum ExecutorStatusEnum {
-    BEFORE, CHECK, AFTER, END
+    BEFORE, CHECK, AFTER, END, ERROR
 }

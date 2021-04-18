@@ -16,10 +16,13 @@ import io.github.kugin.reconciliation.check.DefaultCheckProcessor;
 import io.github.kugin.reconciliation.domain.CheckConfig;
 import io.github.kugin.reconciliation.domain.CheckContext;
 import io.github.kugin.reconciliation.domain.CheckResult;
+import io.github.kugin.reconciliation.enums.CheckStateEnum;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 对账执行器
@@ -78,20 +81,22 @@ public class CheckExecutor {
     /**
      * 执行器业务逻辑
      */
-    public void process(String date) {
+    public CheckContext process(String date) {
         executorManager.initDate(date);
         CheckContext checkContext = CheckContext.builder()
+                .id(this.id)
                 .name(checkConfig.getName())
                 .date(date)
                 .executorManager(executorManager)
                 .build();
         log.info("对账开始:", executorManager.getExecutorKey());
         StopWatch stopWatch = new StopWatch(id);
+        checkContext.setStopWatch(stopWatch);
         try {
             if (executorManager.isProcessing()) {
                 //任务正在执行中
                 log.info("当前任务正在执行,本次执行忽略", executorManager.getExecutorKey());
-                return;
+                return checkContext;
             }
             stopWatch.start(beforeCheckProcessor.getClass().getName());
 
@@ -104,9 +109,12 @@ public class CheckExecutor {
             checkProcessor.compare(checkContext);
 
             CheckResult result = checkContext.getCheckResult();
+            Map<CheckStateEnum, Integer> map = result.getDiffDetailsMap().entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().size()));
             log.info("对账结果:", executorManager.getExecutorKey(), MapUtil.of(Pair.of("sourceSize", checkContext.getSource().size()),
                     Pair.of("targetSize", checkContext.getTarget().size()),
-                    Pair.of("different", result.getDiffDetails().size())));
+                    Pair.of("different", result.getDiffDetails().size()),
+                    Pair.of("details", map)));
             stopWatch.stop();
             stopWatch.start(afterCheckProcessor.getClass().getName());
 
@@ -118,5 +126,6 @@ public class CheckExecutor {
         }
         log.info(stopWatch.prettyPrint());
         log.info("对账结束:", executorManager.getExecutorKey());
+        return checkContext;
     }
 }

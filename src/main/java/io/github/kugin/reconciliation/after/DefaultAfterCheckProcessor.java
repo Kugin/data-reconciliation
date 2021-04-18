@@ -1,8 +1,10 @@
 package io.github.kugin.reconciliation.after;
 
 import io.github.kugin.reconciliation.domain.CheckContext;
-import io.github.kugin.reconciliation.domain.CheckResult;
 import io.github.kugin.reconciliation.domain.CheckUnit;
+import io.github.kugin.reconciliation.enums.CheckSyncEnum;
+
+import java.util.Objects;
 
 /**
  * @author Kugin
@@ -19,37 +21,37 @@ public class DefaultAfterCheckProcessor extends AbstractAfterCheckProcessor {
 
     @Override
     public void doAfter(CheckContext context) {
-        if (checkAfter != null) {
+        if (Objects.nonNull(checkAfter)) {
             checkAfter.doAfter(context);
         }
     }
 
     @Override
-    public void syncSourceMore(CheckUnit checkUnit) {
-        if (checkSync != null) {
-            checkSync.syncSourceMore(checkUnit);
+    public CheckSyncEnum syncSourceMore(CheckUnit checkUnit) {
+        if (Objects.isNull(checkSync)) {
+            return CheckSyncEnum.SYNC;
         }
+        return checkSync.syncSourceMore(checkUnit);
     }
 
     @Override
-    public void syncTargetMore(CheckUnit checkUnit) {
-        if (checkSync != null) {
-            checkSync.syncTargetMore(checkUnit);
+    public CheckSyncEnum syncTargetMore(CheckUnit checkUnit) {
+        if (Objects.isNull(checkSync)) {
+            return CheckSyncEnum.SYNC;
         }
+        return checkSync.syncTargetMore(checkUnit);
     }
 
     @Override
-    public void syncDifferent(CheckUnit checkUnit) {
-        if (checkSync != null) {
-            checkSync.syncDifferent(checkUnit);
+    public CheckSyncEnum syncDifferent(CheckUnit checkUnit) {
+        if (Objects.isNull(checkSync)) {
+            return CheckSyncEnum.SYNC;
         }
+        return checkSync.syncDifferent(checkUnit);
     }
 
     @Override
-    public boolean isComplete(CheckResult checkResult) {
-        if (checkSync != null) {
-            return checkSync.isComplete(checkResult);
-        }
-        return true;
+    public boolean isComplete(CheckContext context) {
+        return Objects.isNull(checkSync) || checkSync.isComplete(context);
     }
 }

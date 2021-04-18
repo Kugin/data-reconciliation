@@ -1,5 +1,6 @@
 package io.github.kugin.reconciliation.domain;
 
+import io.github.kugin.reconciliation.enums.CheckStateEnum;
 import lombok.Builder;
 import lombok.Data;
 
@@ -29,4 +30,9 @@ public class CheckResult {
      * source 与 target 的详细差异
      */
     private List<CheckUnit> diffDetails;
+
+    /**
+     * 按类型 group by 后的详细差异
+     */
+    private Map<CheckStateEnum, List<CheckUnit>> diffDetailsMap;
 }

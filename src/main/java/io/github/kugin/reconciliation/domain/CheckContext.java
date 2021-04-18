@@ -1,5 +1,6 @@
 package io.github.kugin.reconciliation.domain;
 
+import cn.hutool.core.date.StopWatch;
 import io.github.kugin.reconciliation.executor.ExecutorManager;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,11 @@ import java.util.Map;
 @Data
 @Builder
 public class CheckContext {
+
+    /**
+     * 对账id
+     */
+    private String id;
 
     /**
      * 对账名称
@@ -55,4 +61,9 @@ public class CheckContext {
      * 周期管理
      */
     private ExecutorManager executorManager;
+
+    /**
+     * 执行时间
+     */
+    private StopWatch stopWatch;
 }

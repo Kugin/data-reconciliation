@@ -1,5 +1,7 @@
 package io.github.kugin.reconciliation.before;
 
+import io.github.kugin.reconciliation.domain.CheckContext;
+
 import java.util.Objects;
 
 /**
@@ -25,8 +27,8 @@ public class DefaultBeforeCheckProcessor extends AbstractBeforeCheckProcessor {
     }
 
     @Override
-    public boolean check(String date) {
-        return Objects.isNull(checkPre) || checkPre.check(date);
+    public boolean doPre(CheckContext context) {
+        return Objects.isNull(checkPre) || checkPre.doPre(context);
     }
 
     @Override
