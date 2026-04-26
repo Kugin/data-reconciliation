@@ -5,6 +5,7 @@ import io.github.kugin.reconciliation.before.DefaultBeforeCheckProcessor;
 import io.github.kugin.reconciliation.before.DefaultResourceReader;
 import io.github.kugin.reconciliation.check.DefaultCheckProcessor;
 import io.github.kugin.reconciliation.domain.CheckConfig;
+import io.github.kugin.reconciliation.domain.CheckContext;
 import io.github.kugin.reconciliation.domain.CheckEntry;
 import io.github.kugin.reconciliation.entry.TestA;
 import io.github.kugin.reconciliation.entry.TestB;
@@ -21,6 +22,8 @@ import redis.embedded.RedisServer;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class RedisCheckExecutorIntegrationTest {
 
@@ -87,14 +90,18 @@ public class RedisCheckExecutorIntegrationTest {
 
     @Test
     public void testReentrantWithRedisManager() throws Exception {
+        CountDownLatch holdLock = new CountDownLatch(1);
+        CountDownLatch releaseLock = new CountDownLatch(1);
+
         CheckConfig config = CheckConfig.builder()
                 .srcLoader(date -> CheckEntry.wrap(Arrays.asList(new TestA("x", "y", 1d))))
                 .targetLoader(date -> CheckEntry.wrap(Arrays.asList(new TestB("x", "y", 1d))))
-                .checkPre(context -> true)
-                .id("redis-reentrant")
-                .checkAfter(context -> {
-                    try { Thread.sleep(3000); } catch (InterruptedException e) { }
+                .checkPre(context -> {
+                    holdLock.countDown();
+                    try { releaseLock.await(10, TimeUnit.SECONDS); } catch (InterruptedException e) { }
+                    return true;
                 })
+                .id("redis-reentrant")
                 .build();
 
         RedisExecutorManager manager1 = new RedisExecutorManager("redis-reentrant", redissonClient);
@@ -113,10 +120,12 @@ public class RedisCheckExecutorIntegrationTest {
                 .executorManager(manager1)
                 .build();
 
-        // Start first executor, wait briefly, then try a second
-        CompletableFuture<Void> f1 = CompletableFuture.runAsync(() -> executor1.process("20260426"));
-        Thread.sleep(500);
+        // Start first executor, wait until lock is acquired
+        CompletableFuture<CheckContext> f1 = CompletableFuture.supplyAsync(() -> executor1.process("20260426"));
+        Assert.assertTrue(holdLock.await(2, TimeUnit.SECONDS));
+        Assert.assertTrue(manager1.isProcessing());
 
+        // Second executor: blocked because lock is held
         RedisExecutorManager manager2 = new RedisExecutorManager("redis-reentrant", redissonClient);
         CheckExecutor executor2 = CheckExecutor.builder()
                 .id("redis-reentrant")
@@ -124,21 +133,29 @@ public class RedisCheckExecutorIntegrationTest {
                         new DefaultBeforeCheckProcessor(
                                 new DefaultResourceReader(
                                         config.getSrcLoader(), config.getTargetLoader()),
-                                config.getCheckPre()))
+                                context -> true))
                 .checkProcessor(new DefaultCheckProcessor())
                 .afterCheckProcessor(
                         new DefaultAfterCheckProcessor(
                                 config.getCheckSync(), config.getCheckAfter()))
-                .checkConfig(config)
+                .checkConfig(CheckConfig.builder()
+                        .srcLoader(date -> CheckEntry.wrap(Arrays.asList(new TestA("x", "y", 1d))))
+                        .targetLoader(date -> CheckEntry.wrap(Arrays.asList(new TestB("x", "y", 1d))))
+                        .checkPre(context -> true)
+                        .id("redis-reentrant")
+                        .build())
                 .executorManager(manager2)
                 .build();
 
-        CompletableFuture<Void> f2 = CompletableFuture.runAsync(() -> executor2.process("20260426"));
-        f1.join();
-        f2.join();
+        CheckContext ctx2 = executor2.process("20260426");
+        // Second executor was blocked and returned early — no data loaded
+        Assert.assertNull(ctx2.getCheckResult());
 
-        // First executor completed successfully
+        // Release lock, let first executor finish
+        releaseLock.countDown();
+        CheckContext ctx1 = f1.get(5, TimeUnit.SECONDS);
+
         Assert.assertEquals(ExecutorStatusEnum.END.toString(), manager1.getCurrentStatus());
-        Assert.assertFalse(manager1.isProcessing());
+        Assert.assertNotNull(ctx1.getCheckResult());
     }
 }
