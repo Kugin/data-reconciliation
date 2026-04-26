@@ -10,14 +10,16 @@ import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import redis.embedded.RedisServer;
 
+import java.io.IOException;
+
 public class RedisExecutorManagerTest {
 
     private RedisServer redisServer;
     private RedissonClient redissonClient;
 
     @Before
-    public void setUp() {
-        redisServer = RedisServer.builder()
+    public void setUp() throws IOException {
+        redisServer = RedisServer.newRedisServer()
                 .port(63790)
                 .setting("maxmemory 128M")
                 .build();
@@ -28,7 +30,7 @@ public class RedisExecutorManagerTest {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws IOException {
         redissonClient.shutdown();
         redisServer.stop();
     }
@@ -69,9 +71,10 @@ public class RedisExecutorManagerTest {
         RedisExecutorManager manager2 = new RedisExecutorManager("test-reentrant", redissonClient);
         manager2.initDate("20260426");
         Assert.assertTrue(manager2.isProcessing());
-        // manager2 cannot acquire the lock already held by manager1
+        // manager2 cannot acquire the lock already held by manager1,
+        // but can still read the shared status set by manager1
         manager2.setStatus(ExecutorStatusEnum.BEFORE);
-        Assert.assertNull(manager2.getCurrentStatus());
+        Assert.assertEquals("BEFORE", manager2.getCurrentStatus());
     }
 
     @Test
