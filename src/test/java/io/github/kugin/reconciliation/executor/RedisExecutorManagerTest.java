@@ -69,6 +69,9 @@ public class RedisExecutorManagerTest {
         RedisExecutorManager manager2 = new RedisExecutorManager("test-reentrant", redissonClient);
         manager2.initDate("20260426");
         Assert.assertTrue(manager2.isProcessing());
+        // manager2 cannot acquire the lock already held by manager1
+        manager2.setStatus(ExecutorStatusEnum.BEFORE);
+        Assert.assertNull(manager2.getCurrentStatus());
     }
 
     @Test

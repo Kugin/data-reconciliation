@@ -43,9 +43,9 @@
             <version>3.27.2</version>
         </dependency>
         <dependency>
-            <groupId>it.ozimov</groupId>
+            <groupId>com.github.codemonstur</groupId>
             <artifactId>embedded-redis</artifactId>
-            <version>0.7.3</version>
+            <version>1.0.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
