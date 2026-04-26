@@ -1,5 +1,6 @@
 package io.github.kugin.reconciliation.before;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import io.github.kugin.reconciliation.domain.CheckEntry;
 import lombok.SneakyThrows;
 
@@ -37,6 +38,9 @@ public class FileResourceLoader<T> implements ResourceLoader {
     @Override
     public List<CheckEntry> load(String date) {
         List<T> list = readFile(getFilePath(date));
+        if (CharSequenceUtil.isEmpty(identityField) && (checkFields == null || checkFields.isEmpty())) {
+            return CheckEntry.wrap(list);
+        }
         return CheckEntry.wrap(list, identityField, checkFields);
     }
 
