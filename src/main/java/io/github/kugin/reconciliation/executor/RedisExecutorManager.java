@@ -5,6 +5,7 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class RedisExecutorManager extends AbstractExecutorManager {
@@ -13,7 +14,7 @@ public class RedisExecutorManager extends AbstractExecutorManager {
 
     public RedisExecutorManager(String id, RedissonClient redissonClient) {
         super(id);
-        this.redissonClient = redissonClient;
+        this.redissonClient = Objects.requireNonNull(redissonClient, "redissonClient must not be null");
     }
 
     @Override
